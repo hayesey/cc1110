@@ -71,15 +71,21 @@ int convert_rssi(uint8_t rssi_raw) {
 }
 
 void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
-  packet[packet_index] = RFD;
-  packet_index++;
+  if (MARCSTATE == MARC_STATE_RX) {
+    // receive byte
+    packet[packet_index] = RFD;
+    packet_index++;
+  }
+  else if (MARCSTATE == MARC_STATE_TX) {
+  // transmit byte
+  }
 }
 
 void getpacket() {
 
   if (RFIF & RFIF_IRQ_DONE) {
-    unsigned int n = 0, ch;
-    uint16_t rssi_val;
+    unsigned int n = 0; //, ch;
+    //uint16_t rssi_val;
     //char *crc_ok = "FAIL";
 
     //RFST = RFST_SIDLE; //End receive.
