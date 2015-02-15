@@ -280,7 +280,7 @@ void main() {
   txpacket[12] = 0x40;
   txpacket[13] = 0x30;
   txpacket[14] = 0x2D;
-  txpacket_index = 0;
+  txpacket_index = 15;
   while(1) { 
     getpacket();
     if (txpacket_index < 15) {
