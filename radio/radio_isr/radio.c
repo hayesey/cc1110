@@ -245,7 +245,7 @@ void radio_init(void) {
 }
 
 void main() {
-  unsigned char i=0, dotx=0;
+  unsigned char i=0; //, dotx=0;
   
   // uart0 config
   PERCFG = (PERCFG & ~PERCFG_U0CFG) | PERCFG_U1CFG;
@@ -265,14 +265,28 @@ void main() {
   // enable interrupts globally
   F1 = 1;
   EA = 1;
+  txpacket[0] = 0x0E;
+  txpacket[1] = 0x5A;
+  txpacket[2] = 0xA5;
+  txpacket[3] = 0x61;
+  txpacket[4] = 0x4F;
+  txpacket[5] = 0x54;
+  txpacket[6] = 0x54;
+  txpacket[7] = 0x4D;
+  txpacket[8] = 0x50;
+  txpacket[9] = 0x32;
+  txpacket[10] = 0x30;
+  txpacket[11] = 0x2E;
+  txpacket[12] = 0x40;
+  txpacket[13] = 0x30;
+  txpacket[14] = 0x2D;
 
   while(1) { 
     getpacket();
-    if (dotx) {
+    if (txpacket_index < 15) {
       //txpacket = "aOTTMP20.00-";
-      memcpy(txpacket, "aOTTMP20.00-", 12);
-      sendpacket();
-      dotx = 0;
+     sendpacket();
+      //dotx = 0;
     }
     // get byte(s) from uart
     // if packet from uart then sendpacket
