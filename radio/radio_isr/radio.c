@@ -85,7 +85,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
       cons_puts("Sending: ");
       cons_putc(txpacket[txpacket_index]);
       txpacket_index++;
-      cons_putsln("i");
+      cons_putsln("");
       break;
   } 
 }
@@ -245,7 +245,7 @@ void radio_init(void) {
 }
 
 void main() {
-  unsigned char i=0, dotx=1;
+  unsigned char i=0, dotx=0;
   
   // uart0 config
   PERCFG = (PERCFG & ~PERCFG_U0CFG) | PERCFG_U1CFG;
