@@ -2,13 +2,15 @@
 #include "cc1110-ext.h"
 #include <stdint.h>
 #include <stdio.h>
-
+#include <string.h>
 #define MAXLEN 0xFF
 
 void rftxrx_isr(void) __interrupt RFTXRX_VECTOR;
 //char str[1];
 static uint8_t packet_index;
+static uint8_t txpacket_index;
 static __xdata uint8_t packet[MAXLEN];
+static __xdata uint8_t txpacket[MAXLEN];
 unsigned int rssi_offset;
 //static const char banner[] = {'\r', '\n', 'H', 'E', 'L', 'L', 'O', '\r', '\n'};
 
@@ -71,21 +73,45 @@ int convert_rssi(uint8_t rssi_raw) {
 }
 
 void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
-  if (MARCSTATE == MARC_STATE_RX) {
-    // receive byte
-    packet[packet_index] = RFD;
-    packet_index++;
-  }
-  else if (MARCSTATE == MARC_STATE_TX) {
-  // transmit byte
-  }
+  switch (MARCSTATE) {
+    case MARC_STATE_RX:
+      // receive byte
+      packet[packet_index] = RFD;
+      packet_index++;
+      break;
+    case MARC_STATE_TX:
+      // transmit byte
+      RFD = txpacket[txpacket_index];
+      cons_puts("Sending: ");
+      cons_puthex8(txpacket[txpacket_index]);
+      txpacket_index++;
+      cons_putsln("");
+      break;
+  } 
+}
+
+void sendpacket() {
+  cons_putsln("Start TX");
+  // use timer 3 to delay tx to allow time to switch from tx to rx
+  T3CTL=0xDC;
+  T3OVFIF=0; 
+  while (!T3OVFIF);
+  T3CTL=0;
+
+  txpacket_index = 0;
+  RFST = RFST_STX;
+  while (MARCSTATE != MARC_STATE_TX);
+  // tx happens here
+  while (MARCSTATE != MARC_STATE_IDLE);
+  RFIF=0;
+  cons_putsln("Done TX");
 }
 
 void getpacket() {
 
   if (RFIF & RFIF_IRQ_DONE) {
     unsigned int n = 0; //, ch;
-    //uint16_t rssi_val;
+    //uint16_t ssi_val;
     //char *crc_ok = "FAIL";
 
     //RFST = RFST_SIDLE; //End receive.
@@ -219,8 +245,8 @@ void radio_init(void) {
 }
 
 void main() {
-  unsigned char i=0;
-
+  unsigned char i=0, dotx=1;
+  
   // uart0 config
   PERCFG = (PERCFG & ~PERCFG_U0CFG) | PERCFG_U1CFG;
  
@@ -242,5 +268,13 @@ void main() {
 
   while(1) { 
     getpacket();
+    if (dotx) {
+      //txpacket = "aOTTMP20.00-";
+      memcpy(txpacket, "aOTTMP20.00-", 12);
+      sendpacket();
+      dotx = 0;
+    }
+    // get byte(s) from uart
+    // if packet from uart then sendpacket
   }
 }
