@@ -83,7 +83,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
       // transmit byte
       RFD = txpacket[txpacket_index];
       cons_puts("Sending: ");
-      cons_puthex8(txpacket[txpacket_index]);
+      cons_putc(txpacket[txpacket_index]);
       txpacket_index++;
       cons_putsln("");
       break;
