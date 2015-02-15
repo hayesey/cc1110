@@ -85,7 +85,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
       cons_puts("Sending: ");
       cons_putc(txpacket[txpacket_index]);
       txpacket_index++;
-      cons_putsln("");
+      cons_putsln("i");
       break;
   } 
 }
