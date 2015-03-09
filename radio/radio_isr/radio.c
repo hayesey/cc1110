@@ -6,20 +6,11 @@
 #define MAXLEN 0xFF
 
 void rftxrx_isr(void) __interrupt RFTXRX_VECTOR;
-//char str[1];
 static uint8_t packet_index;
-//static uint8_t txpacket_index;
 static __xdata uint8_t packet[MAXLEN];
 
 uint8_t preamble[] = {0x0E, 0x5A, 0xA5};
-//char textmessage[20];
-
-//static __xdata uint8_t txpacket[MAXLEN];
 unsigned int rssi_offset;
-//static const char banner[] = {'\r', '\n', 'H', 'E', 'L', 'L', 'O', '\r', '\n'};
-
-//#define MAXLEN 0xFF
-//char __xdata at 0xfe00 packet[MAXLEN] ;
 
 void delay(int msec) {
   int i,j;
@@ -80,8 +71,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
   switch (MARCSTATE) {
     case MARC_STATE_RX:
       // receive byte
-      packet[packet_index] = RFD;
-      packet_index++;
+      packet[packet_index++] = RFD;
       break;
     case MARC_STATE_TX:
       // transmit byte
@@ -98,6 +88,11 @@ void sendpacket() {
   while (!T3OVFIF);
   T3CTL=0;
 
+  // flash the LED on P0_0
+  P0_0 = 1;
+  delay(25);
+  P0_0 = 0;
+
   packet_index = 0;
   RFST = RFST_STX;
   while (MARCSTATE != MARC_STATE_TX);
@@ -110,21 +105,16 @@ void sendpacket() {
 void getpacket() {
 
   if (RFIF & RFIF_IRQ_DONE) {
-    unsigned int n = 0; //, ch;
-    //uint16_t ssi_val;
-    //char *crc_ok = "FAIL";
-
-    //RFST = RFST_SIDLE; //End receive.
+    unsigned int n = 0;
     while(MARCSTATE!=MARC_STATE_IDLE);
-    // print out the packet to uart
-    // print payload size
-    
+
     // flash the LED on P0_0
     P0_0 = 1;
     delay(25);
     P0_0 = 0;
 
     cons_putsln("New Packet:");
+    // print packet size (first byte)
     cons_puthex8(packet[0]);
     cons_putsln("");
     // print network id (panid)
@@ -136,30 +126,21 @@ void getpacket() {
     n = 3;
     while(n < (packet[0]+1)) {
       cons_putc(packet[n++]);
-      //ch = packet[n++];
-      //if (ch != 0xFF) 
-      //cons_putc(ch);
     }
     cons_putsln("");
     cons_puts("RSSI: ");
     cons_puthex8(RSSI);
-    //rssi_val = convert_rssi(RSSI);
-    //cons_puthex16(rssi_val);
+
     cons_puts(" LQI: ");
     cons_puthex8(LQI);
     cons_putsln("");
+
     if (PKTSTATUS & 0x80) {
-      //crc_ok = "OK";
       cons_putsln("CRC: OK");
     }
     else {
       cons_putsln("CRC: Fail");
     }
-      //cons_putsln(crc_ok);
-    //cons_putc('\n');
-    //for(i=0;i<MAXLEN;i++)
-    //  packet[i]=0xFF;
-    //i=0;
   }
   if (MARCSTATE != MARC_STATE_RX) {
     packet_index = 0;
@@ -248,7 +229,8 @@ void radio_init(void) {
 }
 
 void main() {
-  unsigned char i=0; //, dotx=0;
+  //unsigned char i=0; //, dotx=0;
+  int i=0;
   
   // uart0 config
   PERCFG = (PERCFG & ~PERCFG_U0CFG) | PERCFG_U1CFG;
@@ -269,18 +251,16 @@ void main() {
   F1 = 1;
   EA = 1;
 
+  // put packet header in
   memcpy(packet, preamble, sizeof(preamble)/sizeof(uint8_t));
-  memcpy(packet+sizeof(preamble)/sizeof(uint8_t), "aOTTMP20.00-", 12);
-  //cons_puts("packet to send: ");
-  //cons_putsln(packet);
-  //packet = {0x0E, 0x5A, 0xA5, 0x61, 0x4F, 0x54, 0x54, 0x4D, 0x50, 0x32, 0x30, 0x2E, 0x30, 0x30, 0x2D};
-  //packet_index = 15;
-  sendpacket();
-  while(1) { 
+  // put packet data in
+  memcpy(packet+sizeof(preamble)/sizeof(uint8_t), "aTRSTARTING-", 12);
+  // send it!
+  for (i=0; i<5; i++)
+    sendpacket();
 
+  while(1) {
+    // rx forever
     getpacket();
-
-    // get byte(s) from uart
-    // if packet from uart then sendpacket
   }
 }
