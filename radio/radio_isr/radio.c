@@ -8,9 +8,13 @@
 void rftxrx_isr(void) __interrupt RFTXRX_VECTOR;
 //char str[1];
 static uint8_t packet_index;
-static uint8_t txpacket_index;
+//static uint8_t txpacket_index;
 static __xdata uint8_t packet[MAXLEN];
-static __xdata uint8_t txpacket[MAXLEN];
+
+uint8_t preamble[] = {0x0E, 0x5A, 0xA5};
+//char textmessage[20];
+
+//static __xdata uint8_t txpacket[MAXLEN];
 unsigned int rssi_offset;
 //static const char banner[] = {'\r', '\n', 'H', 'E', 'L', 'L', 'O', '\r', '\n'};
 
@@ -81,12 +85,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
       break;
     case MARC_STATE_TX:
       // transmit byte
-      RFD = txpacket[txpacket_index];
-      cons_puts("Sending: ");
-      cons_putc(txpacket[txpacket_index]);
-      txpacket_index++;
-      cons_putsln("");
-      RFST = RFST_SIDLE;
+      RFD = packet[packet_index++];
       break;
   } 
 }
@@ -99,14 +98,11 @@ void sendpacket() {
   while (!T3OVFIF);
   T3CTL=0;
 
-  txpacket_index = 0;
+  packet_index = 0;
   RFST = RFST_STX;
-  cons_putsln("0");
   while (MARCSTATE != MARC_STATE_TX);
-  cons_putsln("1");
   // tx happens here
   while (MARCSTATE != MARC_STATE_IDLE);
-  cons_putsln("2");
   RFIF=0;
   cons_putsln("Done TX");
 }
@@ -219,8 +215,9 @@ void radio_init(void) {
   AGCCTRL0 = 0xB0; // AGCCTRL0 AGC Control 
   FSCAL3 = 0xEA; // FSCAL3 Frequency Synthesizer Calibration 
   FSCTRL0 = 0x00; // Frequency synthesizer control.
-  FREND0 = 0x10; // Front end RX configuration.
+  FREND0 = 0x10; // Front end TX configuration.
   MCSM0 = 0x18; // Main Radio Control State Machine configuration.
+  FSCAL3 = 0xEA;
   FSCAL2 = 0x2A;
   FSCAL1 = 0x00; // Frequency synthesizer calibration.
   FSCAL0 = 0x1F; // Frequency synthesizer calibration.
@@ -238,6 +235,8 @@ void radio_init(void) {
   ADDR = 0x00; // Device address. Not used.
   PKTLEN = 0x0F;
   rssi_offset = 77;
+  RFIF = 0;
+  packet_index = 0;
   //enable interrupts.
   RFTXRXIF=0;
   RFTXRXIE=1;
@@ -269,15 +268,18 @@ void main() {
   // enable interrupts globally
   F1 = 1;
   EA = 1;
-  txpacket = {0x0E, 0x5A, 0xA5, 0x61, 0x4F, 0x54, 0x54, 0x4D, 0x50, 0x32, 0x30, 0x2E, 0x40, 0x30, 0x2D};
-  txpacket_index = 15;
+
+  memcpy(packet, preamble, sizeof(preamble)/sizeof(uint8_t));
+  memcpy(packet+sizeof(preamble)/sizeof(uint8_t), "aOTTMP20.00-", 12);
+  //cons_puts("packet to send: ");
+  //cons_putsln(packet);
+  //packet = {0x0E, 0x5A, 0xA5, 0x61, 0x4F, 0x54, 0x54, 0x4D, 0x50, 0x32, 0x30, 0x2E, 0x30, 0x30, 0x2D};
+  //packet_index = 15;
+  sendpacket();
   while(1) { 
+
     getpacket();
-    if (txpacket_index < 15) {
-      //txpacket = "aOTTMP20.00-";
-     sendpacket();
-      //dotx = 0;
-    }
+
     // get byte(s) from uart
     // if packet from uart then sendpacket
   }
