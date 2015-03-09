@@ -86,6 +86,7 @@ void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
       cons_putc(txpacket[txpacket_index]);
       txpacket_index++;
       cons_putsln("");
+      RFST = RFST_SIDLE;
       break;
   } 
 }
@@ -100,9 +101,12 @@ void sendpacket() {
 
   txpacket_index = 0;
   RFST = RFST_STX;
+  cons_putsln("0");
   while (MARCSTATE != MARC_STATE_TX);
+  cons_putsln("1");
   // tx happens here
   while (MARCSTATE != MARC_STATE_IDLE);
+  cons_putsln("2");
   RFIF=0;
   cons_putsln("Done TX");
 }
@@ -265,21 +269,7 @@ void main() {
   // enable interrupts globally
   F1 = 1;
   EA = 1;
-  txpacket[0] = 0x0E;
-  txpacket[1] = 0x5A;
-  txpacket[2] = 0xA5;
-  txpacket[3] = 0x61;
-  txpacket[4] = 0x4F;
-  txpacket[5] = 0x54;
-  txpacket[6] = 0x54;
-  txpacket[7] = 0x4D;
-  txpacket[8] = 0x50;
-  txpacket[9] = 0x32;
-  txpacket[10] = 0x30;
-  txpacket[11] = 0x2E;
-  txpacket[12] = 0x40;
-  txpacket[13] = 0x30;
-  txpacket[14] = 0x2D;
+  txpacket = {0x0E, 0x5A, 0xA5, 0x61, 0x4F, 0x54, 0x54, 0x4D, 0x50, 0x32, 0x30, 0x2E, 0x40, 0x30, 0x2D};
   txpacket_index = 15;
   while(1) { 
     getpacket();
