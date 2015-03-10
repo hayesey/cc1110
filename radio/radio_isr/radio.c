@@ -102,8 +102,20 @@ void sendpacket() {
   cons_putsln("Done TX");
 }
 
-void getpacket() {
+void sendllap(char *m, int count) {
+  int i=0;
+  // sends an llap message count times
+  // put packet header in
+  memcpy(packet, preamble, sizeof(preamble)/sizeof(uint8_t));
+  // put packet data in
+  memcpy(packet+sizeof(preamble)/sizeof(uint8_t), m, 12);
+  // send it!
+  for (i=0; i<count; i++)
+    sendpacket();
+}
 
+void getpacket() {
+  char llapmsg[13];
   if (RFIF & RFIF_IRQ_DONE) {
     unsigned int n = 0;
     while(MARCSTATE!=MARC_STATE_IDLE);
@@ -125,8 +137,11 @@ void getpacket() {
     // print packet data
     n = 3;
     while(n < (packet[0]+1)) {
+      llapmsg[n-3] = packet[n];
       cons_putc(packet[n++]);
     }
+    llapmsg[12] = '\0';
+    
     cons_putsln("");
     cons_puts("RSSI: ");
     cons_puthex8(RSSI);
@@ -140,6 +155,20 @@ void getpacket() {
     }
     else {
       cons_putsln("CRC: Fail");
+    }
+    
+    // process llap message if it is one
+    if (llapmsg[0] == 'a') {
+      // seems like a valid llap message
+      if (strncmp(llapmsg+1, "TR", 2) == 0) {
+	// its for us!
+	cons_putsln("");
+	cons_putsln("its for us");
+	// echo response
+	sendllap(llapmsg, 1);
+	// toggle led
+	P0_1 ^= ~P0_1;
+      }
     }
   }
   if (MARCSTATE != MARC_STATE_RX) {
@@ -230,7 +259,6 @@ void radio_init(void) {
 
 void main() {
   //unsigned char i=0; //, dotx=0;
-  int i=0;
   
   // uart0 config
   PERCFG = (PERCFG & ~PERCFG_U0CFG) | PERCFG_U1CFG;
@@ -241,9 +269,10 @@ void main() {
   U0GCR = 13;
   U0BAUD = 59;
   URX0IF = 0;
-  // configure port 0 pin 0 as output and set low
-  P0DIR |= 0x01;
+  // configure port 0 pin 0 & 1 as output and set low
+  P0DIR |= 0x03;
   P0_0 = 0;
+  P0_1 = 0;
 
   radio_init();
 
@@ -251,13 +280,8 @@ void main() {
   F1 = 1;
   EA = 1;
 
-  // put packet header in
-  memcpy(packet, preamble, sizeof(preamble)/sizeof(uint8_t));
-  // put packet data in
-  memcpy(packet+sizeof(preamble)/sizeof(uint8_t), "aTRSTARTING-", 12);
-  // send it!
-  for (i=0; i<5; i++)
-    sendpacket();
+  // send bootup message 5 times
+  sendllap("aTRSTARTING-", 5);
 
   while(1) {
     // rx forever
