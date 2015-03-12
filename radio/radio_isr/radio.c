@@ -160,14 +160,24 @@ void getpacket() {
     // process llap message if it is one
     if (llapmsg[0] == 'a') {
       // seems like a valid llap message
-      if (strncmp(llapmsg+1, "TR", 2) == 0) {
+      if (strncmp(llapmsg+1, "TRLEDON", 7) == 0) {
 	// its for us!
-	cons_putsln("");
-	cons_putsln("its for us");
+	//cons_putsln("");
+	//cons_putsln("LED ON");
 	// echo response
 	sendllap(llapmsg, 1);
 	// toggle led
-	P0_1 ^= ~P0_1;
+	//P0_1 ^= ~P0_1;
+	P0_1 = 1; // turn on
+      } else if (strncmp(llapmsg+1, "TRLEDOFF", 8) == 0) {
+	// its for us!
+	//cons_putsln("");
+	//cons_putsln("its for us");
+	// echo response
+	sendllap(llapmsg, 1);
+	// toggle led
+	//P0_1 ^= ~P0_1;
+	P0_1 = 0; // turn off
       }
     }
   }
