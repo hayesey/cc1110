@@ -67,6 +67,14 @@ int convert_rssi(uint8_t rssi_raw) {
   }
 }
 
+void switchchange(int *prevstate) {
+  if (P2_4 != *prevstate) {
+    P0_1 ^= 1;
+    delay(100); // crap debounce
+  }
+  *prevstate = P2_4;
+}
+
 void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
   switch (MARCSTATE) {
     case MARC_STATE_RX:
@@ -118,7 +126,8 @@ void getpacket() {
   char llapmsg[13];
   if (RFIF & RFIF_IRQ_DONE) {
     unsigned int n = 0;
-    while(MARCSTATE!=MARC_STATE_IDLE);
+    //while(MARCSTATE!=MARC_STATE_IDLE);
+    RFIF = 0;
 
     // flash the LED on P0_0
     P0_0 = 1;
@@ -264,20 +273,24 @@ void radio_init(void) {
 
 void main() {
   //unsigned char i=0; //, dotx=0;
+  int swstate;
   
   // uart0 config
   PERCFG = (PERCFG & ~PERCFG_U0CFG) | PERCFG_U1CFG;
- 
   P0SEL |= 0x08 | 0x04;
   U0CSR |= 0x80 | 0x40;
   // 115200
   U0GCR = 13;
   U0BAUD = 59;
   URX0IF = 0;
+
   // configure port 0 pin 0 & 1 as output and set low
-  P0DIR |= 0x03;
+  P0DIR |= 0x02 | 0x01;
   P0_0 = 0;
   P0_1 = 0;
+
+  // pin 4 on port 2 is input for manual switch, get initial state
+  swstate = P2_4;
 
   radio_init();
 
@@ -291,5 +304,7 @@ void main() {
   while(1) {
     // rx forever
     getpacket();
+    // check input state
+    switchchange(&swstate);
   }
 }
