@@ -157,27 +157,22 @@ void getpacket() {
       cons_putsln("CRC: Fail");
     }
     
-    // process llap message if it is one
-    if (llapmsg[0] == 'a') {
+    // process llap message if it is one and its for us
+    if (strncmp(llapmsg, "aTR", 3) == 0) {
       // seems like a valid llap message
-      if (strncmp(llapmsg+1, "TRLEDON", 7) == 0) {
-	// its for us!
-	//cons_putsln("");
-	//cons_putsln("LED ON");
-	// echo response
+      if (strncmp(llapmsg+3, "LEDON", 5) == 0) {
 	sendllap(llapmsg, 1);
-	// toggle led
-	//P0_1 ^= ~P0_1;
 	P0_1 = 1; // turn on
-      } else if (strncmp(llapmsg+1, "TRLEDOFF", 8) == 0) {
-	// its for us!
-	//cons_putsln("");
-	//cons_putsln("its for us");
-	// echo response
+      } else if (strncmp(llapmsg+3, "LEDOFF", 6) == 0) {
 	sendllap(llapmsg, 1);
-	// toggle led
-	//P0_1 ^= ~P0_1;
 	P0_1 = 0; // turn off
+      } else if (strncmp(llapmsg+3, "HELLO", 5) == 0) {
+	// ping
+	sendllap(llapmsg, 1);
+      } else if (strncmp(llapmsg+3, "REBOOT", 6) == 0) {
+	// soft reboot to start of code
+	sendllap(llapmsg, 1);
+	__asm LCALL 0x0 __endasm;
       }
     }
   }
