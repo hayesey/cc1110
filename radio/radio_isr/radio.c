@@ -169,19 +169,26 @@ void getpacket() {
     // process llap message if it is one and its for us
     if (strncmp(llapmsg, "aTR", 3) == 0) {
       // seems like a valid llap message
-      if (strncmp(llapmsg+3, "LEDON", 5) == 0) {
+      if (strncmp(llapmsg+3, "LEDON----", 9) == 0) {
 	sendllap(llapmsg, 1);
 	P0_1 = 1; // turn on
-      } else if (strncmp(llapmsg+3, "LEDOFF", 6) == 0) {
+      } else if (strncmp(llapmsg+3, "LEDOFF---", 9) == 0) {
 	sendllap(llapmsg, 1);
 	P0_1 = 0; // turn off
-      } else if (strncmp(llapmsg+3, "HELLO", 5) == 0) {
+      } else if (strncmp(llapmsg+3, "HELLO----", 9) == 0) {
 	// ping
 	sendllap(llapmsg, 1);
-      } else if (strncmp(llapmsg+3, "REBOOT", 6) == 0) {
+      } else if (strncmp(llapmsg+3, "REBOOT---", 9) == 0) {
 	// soft reboot to start of code
 	sendllap(llapmsg, 1);
 	__asm LCALL 0x0 __endasm;
+      } else if (strncmp(llapmsg+3, "LED------", 9) == 0) {
+	// send led current state
+	if (P0_1 == 0) {
+	  sendllap("aTRLEDOFF---", 1);
+	} else {
+	  sendllap("aTRLEDON----", 1);
+	}
       }
     }
   }
