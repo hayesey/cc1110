@@ -68,11 +68,11 @@ int convert_rssi(uint8_t rssi_raw) {
 }
 
 void switchchange(int *prevstate) {
-  if (P2_4 != *prevstate) {
-    P0_1 ^= 1;
+  if (P1_6 != *prevstate) {
+    P1_3 ^= 1;
     delay(100); // crap debounce
   }
-  *prevstate = P2_4;
+  *prevstate = P1_6;
 }
 
 void rftxrx_isr(void) __interrupt RFTXRX_VECTOR {
@@ -97,9 +97,9 @@ void sendpacket() {
   T3CTL=0;
 
   // flash the LED on P0_0
-  P0_0 = 1;
-  delay(25);
-  P0_0 = 0;
+  //P0_0 = 1;
+  //delay(25);
+  //P0_0 = 0;
 
   packet_index = 0;
   RFST = RFST_STX;
@@ -130,9 +130,9 @@ void getpacket() {
     RFIF = 0;
 
     // flash the LED on P0_0
-    P0_0 = 1;
-    delay(25);
-    P0_0 = 0;
+    //P0_0 = 1;
+    //delay(25);
+    //P0_0 = 0;
 
     cons_putsln("New Packet:");
     // print packet size (first byte)
@@ -171,10 +171,10 @@ void getpacket() {
       // seems like a valid llap message
       if (strncmp(llapmsg+3, "LEDON----", 9) == 0) {
 	sendllap(llapmsg, 1);
-	P0_1 = 1; // turn on
+	P1_3 = 1; // turn on
       } else if (strncmp(llapmsg+3, "LEDOFF---", 9) == 0) {
 	sendllap(llapmsg, 1);
-	P0_1 = 0; // turn off
+	P1_3 = 0; // turn off
       } else if (strncmp(llapmsg+3, "HELLO----", 9) == 0) {
 	// ping
 	sendllap(llapmsg, 1);
@@ -184,7 +184,7 @@ void getpacket() {
 	__asm LCALL 0x0 __endasm;
       } else if (strncmp(llapmsg+3, "LED------", 9) == 0) {
 	// send led current state
-	if (P0_1 == 0) {
+	if (P1_3 == 0) {
 	  sendllap("aTRLEDOFF---", 1);
 	} else {
 	  sendllap("aTRLEDON----", 1);
@@ -291,13 +291,12 @@ void main() {
   U0BAUD = 59;
   URX0IF = 0;
 
-  // configure port 0 pin 0 & 1 as output and set low
-  P0DIR |= 0x02 | 0x01;
-  P0_0 = 0;
-  P0_1 = 0;
+  // configure port 1 pin 3
+  P1DIR |= 0x08;
+  P1_3 = 0;
 
-  // pin 4 on port 2 is input for manual switch, get initial state
-  swstate = P2_4;
+  // pin 6 on port 1 is input for manual switch, get initial state
+  swstate = P1_6;
 
   radio_init();
 
